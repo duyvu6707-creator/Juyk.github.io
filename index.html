@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Doraemon EvoWars: Divine Magic Pro</title>
@@ -252,7 +251,10 @@
         </div>
     </div>
 
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
+    const socket = io("https://game-server-n8xj.onrender.com"); 
+    
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
     const mmCanvas = document.getElementById('minimapCanvas');
@@ -396,7 +398,13 @@
             
             this.x = Math.max(this.radius, Math.min(WORLD_SIZE - this.radius, this.x));
             this.y = Math.max(this.radius, Math.min(WORLD_SIZE - this.radius, this.y));
-            
+
+            if (this.isPlayer && isPlaying && (this.lastSentX !== this.x || this.lastSentY !== this.y)) {
+                socket.emit('toiDiChuyen', { x: this.x, y: this.y, angle: this.angle });
+                this.lastSentX = this.x;
+                this.lastSentY = this.y;
+            }
+
             if (this.atkCd > 0) this.atkCd--; if (this.teleCd > 0) this.teleCd--;
             if (this.isAttacking) {
                 this.swing += isMobile ? 0.75 : 0.65; 
@@ -598,6 +606,9 @@
             if (this.xp >= this.targetXp) { 
                 this.xp = 0; this.level = Math.min(100, this.level + 1); 
                 this.targetXp = 100 + this.level * (this.level < 40 ? 60 : 215); 
+                if (this.isPlayer && socket.connected) {
+                    socket.emit('nguoiChoiLenCap', { level: this.level });
+                }
                 if (this.isPlayer && 'vibrate' in navigator) navigator.vibrate(35); 
             }
         }
@@ -1070,6 +1081,12 @@
         for (let i=0; i<FOOD_COUNT; i++) spawnFood(); 
         const safePos = getSafeLocation();
         player = new Entity(safePos.x, safePos.y, true, playerName);
+        if (socket.connected) {
+            socket.emit('dangKyNguoiChoi', { 
+                 name: playerName, 
+                 level: player.level
+            });
+        }
         camera.x = player.x; camera.y = player.y;
         setInterval(() => { if (!isPlaying) return; updateFoodGrid(); }, 1200); 
         loop(); 
