@@ -79,7 +79,6 @@
         .btn-action:hover { transform: scale(1.05); box-shadow: 0 0 6vmin var(--magic-gold); }
         .btn-action:active { transform: scale(0.95); }
 
-        /* --- STREAMING_CHUNK: Styling the character naming input --- */
         #name-input-container {
             margin-top: 4vmin;
             display: flex;
@@ -253,19 +252,27 @@
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
-    const socket = io("https://game-server-n8xj.onrender.com"); 
-    socket.on('updateMap', (playersData) => {
-        Object.keys(playersData).forEach(id => {
-            if (id !== socket.id) {
-                otherPlayers.set(id, playersData[id]);
-            }
+    let socket;
+    try {
+        socket = io("https://game-server-n8xj.onrender.com", { reconnectionAttempts: 3, timeout: 5000 }); 
+        socket.on('updateMap', (playersData) => {
+            Object.keys(playersData).forEach(id => {
+                if (id !== socket.id) {
+                    let p = playersData[id];
+                    let shadow = otherPlayers.get(id);
+                    if (!shadow) {
+                        shadow = new Entity(p.x, p.y, false, p.name || "Player");
+                        otherPlayers.set(id, shadow);
+                    }
+                    shadow.x = p.x;
+                    shadow.y = p.y;
+                    shadow.level = p.level || 1;
+                    shadow.angle = p.angle || 0;
+                }
+            });
         });
-    });
-
-socket.on('removePlayer', (id) => {
-    otherPlayers.delete(id); // Xóa khi có người thoát
-});
-// ----------------------
+        socket.on('removePlayer', (id) => { otherPlayers.delete(id); });
+    } catch(e) { console.log("Chế độ chơi đơn (Offline Mode) do không kết nối được Server."); }
     
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
@@ -412,7 +419,7 @@ socket.on('removePlayer', (id) => {
             this.x = Math.max(this.radius, Math.min(WORLD_SIZE - this.radius, this.x));
             this.y = Math.max(this.radius, Math.min(WORLD_SIZE - this.radius, this.y));
 
-            if (this.isPlayer && isPlaying && (this.lastSentX !== this.x || this.lastSentY !== this.y)) {
+            if (this.isPlayer && isPlaying && socket && socket.connected && (this.lastSentX !== this.x || this.lastSentY !== this.y)) {
                 socket.emit('toiDiChuyen', { x: this.x, y: this.y, angle: this.angle });
                 this.lastSentX = this.x;
                 this.lastSentY = this.y;
@@ -619,7 +626,7 @@ socket.on('removePlayer', (id) => {
             if (this.xp >= this.targetXp) { 
                 this.xp = 0; this.level = Math.min(100, this.level + 1); 
                 this.targetXp = 100 + this.level * (this.level < 40 ? 60 : 215); 
-                if (this.isPlayer && socket.connected) {
+                if (this.isPlayer && socket && socket.connected) {
                     socket.emit('nguoiChoiLenCap', { level: this.level });
                 }
                 if (this.isPlayer && 'vibrate' in navigator) navigator.vibrate(35); 
@@ -862,8 +869,7 @@ socket.on('removePlayer', (id) => {
             }
 
             ctx.restore(); 
-            ctx.restore(); 
-
+            
             let label = `Lv.${this.level}`;
             if (this.isPlayer) label = `${this.name} (Lv.${this.level})`;
             else if (this.isEnforcer) label = "⚠ ENFORCER ⚠";
@@ -871,7 +877,8 @@ socket.on('removePlayer', (id) => {
             
             ctx.fillStyle = (this.isPlayer || this.isOverlord || this.isEnforcer) ? color : "#fff"; 
             ctx.font = `bold ${Math.max(18, r/1.1)}px sans-serif`; ctx.textAlign = "center";
-            ctx.fillText(label, this.x, this.y - r - 75);
+            ctx.fillText(label, 0, -r - 35); // SỬA LỖI TỌA ĐỘ CHỮ Ở ĐÂY
+            ctx.restore(); 
         }
     }
 
@@ -987,7 +994,6 @@ socket.on('removePlayer', (id) => {
         mmCtx.lineWidth = 1.5;
         mmCtx.strokeRect(0, 0, mmW, mmW);
 
-
         for(let b of bots) if(b.alive) { 
             mmCtx.fillStyle = (b.isEnforcer || b.isOverlord) ? "#ff0" : (b.isElite ? "#f44" : "#900"); 
             const bSize = (b.isEnforcer || b.isOverlord) ? 3.5 : 2;
@@ -1031,13 +1037,13 @@ socket.on('removePlayer', (id) => {
             }
         });
         bots.forEach(b => b.draw()); if(player.alive) player.draw(); 
-        ctx.restore();
-        otherPlayers.forEach((p, id) => {
-            let shadow = new Entity(p.x, p.y, false, p.name || "Player");
-            shadow.level = p.level || 1;
-            shadow.angle = p.angle || 0;
+        
+        // SỬA LỖI KHỞI TẠO ĐỆ QUY MULTIPLAYER Ở ĐÂY
+        otherPlayers.forEach((shadow, id) => {
             shadow.draw();
         });
+        
+        ctx.restore();
         if (isPlaying) drawMM();
     }
 
@@ -1100,7 +1106,7 @@ socket.on('removePlayer', (id) => {
         for (let i=0; i<FOOD_COUNT; i++) spawnFood(); 
         const safePos = getSafeLocation();
         player = new Entity(safePos.x, safePos.y, true, playerName);
-        if (socket.connected) {
+        if (socket && socket.connected) {
             socket.emit('dangKyNguoiChoi', { 
                  name: playerName, 
                  level: player.level
