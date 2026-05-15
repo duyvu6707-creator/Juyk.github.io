@@ -255,6 +255,17 @@
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
     const socket = io("https://game-server-n8xj.onrender.com"); 
+    socket.on('updateMap', (playersData) => {
+        Object.keys(playersData).forEach(id => {
+            if (id !== socket.id) {
+                otherPlayers.set(id, playersData[id]);
+        });
+    });
+
+socket.on('removePlayer', (id) => {
+    otherPlayers.delete(id); // Xóa khi có người thoát
+});
+// ----------------------
     
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
@@ -275,6 +286,7 @@
     ];
 
     let player = null, foods = [], bots = [], trails = [], embers = [], isPlaying = false;
+    let otherPlayers = new Map();
     let keys = {}, mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     let camera = { x: 0, y: 0, zoom: 1 };
     let joystick = { active: false, angle: 0, identifier: null, cx: 0, cy: 0 };
@@ -1020,6 +1032,12 @@
         });
         bots.forEach(b => b.draw()); if(player.alive) player.draw(); 
         ctx.restore();
+        otherPlayers.forEach((p, id) => {
+            let shadow = new Entity(p.x, p.y, false, p.name || "Player");
+            shadow.level = p.level || 1;
+            shadow.angle = p.angle || 0;
+            shadow.draw();
+        });
         if (isPlaying) drawMM();
     }
 
