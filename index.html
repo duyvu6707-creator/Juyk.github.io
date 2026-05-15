@@ -258,6 +258,7 @@
         Object.keys(playersData).forEach(id => {
             if (id !== socket.id) {
                 otherPlayers.set(id, playersData[id]);
+            }
         });
     });
 
