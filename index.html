@@ -399,16 +399,13 @@
             <div class="menu-title">Vui lòng chọn học phần ôn tập:</div>
             <div class="subject-zone">
                 <button class="subject-btn eco" onclick="switchSubject('eco')">
-                    <h2>1. Kinh Tế Chính Trị Mác - Lênin</h2>
-                    <p>Hệ thống câu hỏi theo chương</p>
+                    <h2>Kinh Tế Chính Trị Mác - Lênin</h2>
                 </button>
                 <button class="subject-btn law" onclick="switchSubject('law')">
-                    <h2>2. Pháp Luật Đại Cương</h2>
-                    <p>Hệ thống trắc nghiệm tổng hợp</p>
+                    <h2>Pháp Luật Đại Cương</h2>
                 </button>
                 <button class="subject-btn hcm" onclick="switchSubject('hcm')" style="border-left-color: #e84393;">
-                    <h2>3. Tư Tưởng Hồ Chí Minh</h2>
-                    <p>Hệ thống câu hỏi theo chuyên đề</p>
+                    <h2>Tư Tưởng Hồ Chí Minh</h2>
                 </button>
             </div>
         </div>
@@ -3091,7 +3088,6 @@
                     btn.style.borderLeftColor = globalQuizDatabase[currentSubject].color;
                     btn.innerHTML = `
                         <h2>${groupName}</h2>
-                        <p>Nhấn vào để xem danh sách các bài học tương ứng</p>
                     `;
                     btn.onclick = () => renderChaptersByGroup(groupName);
                     listContainer.appendChild(btn);
